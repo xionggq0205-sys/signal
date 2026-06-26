@@ -9,7 +9,7 @@
  * 5. Persistence to SQLite via Prisma
  */
 
-import { collectSignals, expandKeywords } from "./signals/collector";
+import { collectSignals, expandKeywords, generateMockSignals } from "./signals/collector";
 import { classifySignals } from "./llm/classifier";
 import { calculateDemandScore, makeGoNoGoDecision } from "./scoring/engine";
 import { saveSignals, saveScoreSnapshot, createAlert, getTopic } from "./db-ops";
@@ -96,13 +96,14 @@ export async function runPipeline(
 /**
  * Quick scan: run pipeline for a subset of sources (faster, for initial preview).
  * Uses only Reddit + HN + Google Trends for speed.
+ * Falls back to mock data if no real signals found.
  */
 export async function quickScan(
   topicId: string,
   query: string
 ): Promise<PipelineResult> {
   console.log(`[QuickScan] Fast-scanning: "${query}"`);
-  const rawSignals = await collectSignals(query, {
+  let rawSignals = await collectSignals(query, {
     keywords: expandKeywords(query).direct.slice(0, 3),
     sources: {
       reddit: true,
@@ -116,6 +117,37 @@ export async function quickScan(
     maxPerSource: 5,
   });
 
+  if (rawSignals.length === 0) {
+    console.log(`[QuickScan] No real signals — using mock data`);
+    rawSignals = generateMockSignals(query);
+  }
+
+  const classifiedSignals = classifySignals(rawSignals);
+  const score = calculateDemandScore(classifiedSignals);
+  const decision = makeGoNoGoDecision(classifiedSignals, score);
+
+  await saveSignals(topicId, classifiedSignals);
+  await saveScoreSnapshot(topicId, score, decision);
+
+  return {
+    topicId,
+    signals: classifiedSignals,
+    score,
+    decision,
+    signalsSaved: classifiedSignals.length,
+  };
+}
+
+/**
+ * Run pipeline with mock signals (development/demo mode).
+ * Used when API keys are not configured.
+ */
+export async function runMockPipeline(
+  topicId: string,
+  query: string
+): Promise<PipelineResult> {
+  console.log(`[MockPipeline] Generating mock signals for: "${query}"`);
+  const rawSignals = generateMockSignals(query);
   const classifiedSignals = classifySignals(rawSignals);
   const score = calculateDemandScore(classifiedSignals);
   const decision = makeGoNoGoDecision(classifiedSignals, score);

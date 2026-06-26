@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { runPipeline } from "@/lib/pipeline";
+import { runPipeline, runMockPipeline } from "@/lib/pipeline";
 
 export async function POST(
   req: NextRequest,
@@ -23,7 +23,12 @@ export async function POST(
       );
     }
 
-    const result = await runPipeline(id, query);
+    // Run real pipeline first; fall back to mock if no signals found
+    let result = await runPipeline(id, query);
+    if (result.signals.length === 0) {
+      console.log(`[Scan] No real signals found — using mock data for "${query}"`);
+      result = await runMockPipeline(id, query);
+    }
 
     return NextResponse.json({
       signalsCount: result.signals.length,

@@ -1,12 +1,25 @@
 /**
- * API Route: POST /api/topics
- * Create a new topic and run initial quick scan.
+ * API Route: GET /api/topics — list all topics
+ * API Route: POST /api/topics — create a new topic
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createTopic } from "@/lib/db-ops";
+import { createTopic, listTopics } from "@/lib/db-ops";
 import { quickScan } from "@/lib/pipeline";
 import { expandKeywords } from "@/lib/signals/collector";
+
+export async function GET() {
+  try {
+    const topics = await listTopics();
+    return NextResponse.json(topics);
+  } catch (err) {
+    console.error("[GET /api/topics]", err);
+    return NextResponse.json(
+      { error: "Failed to list topics" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Activity,
@@ -9,13 +9,31 @@ import {
   Zap,
   ArrowRight,
   Loader2,
+  ChevronRight,
 } from "lucide-react";
+
+interface TopicSummary {
+  id: string;
+  title: string;
+  createdAt: string;
+  _count: { signals: number; scoreSnapshots: number };
+}
 
 export default function Home() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [topics, setTopics] = useState<TopicSummary[]>([]);
+  const [loadingTopics, setLoadingTopics] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/topics")
+      .then((r) => r.json())
+      .then(setTopics)
+      .catch(() => {})
+      .finally(() => setLoadingTopics(false));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,6 +187,43 @@ export default function Home() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Existing Topics */}
+        <div className="mt-16 max-w-[560px] mx-auto w-full">
+          <h3 className="text-[13px] font-semibold text-fg-muted mb-3 font-mono uppercase tracking-wider">
+            Recent Topics
+          </h3>
+          {loadingTopics ? (
+            <div className="flex items-center gap-2 text-fg-dim text-sm">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Loading...
+            </div>
+          ) : topics.length > 0 ? (
+            <div className="space-y-1.5">
+              {topics.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => router.push(`/dashboard?id=${t.id}`)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-bg-card border border-border rounded text-left hover:border-accent/30 transition-colors cursor-pointer group"
+                >
+                  <div>
+                    <span className="text-[14px] font-medium text-fg group-hover:text-accent transition-colors">
+                      {t.title}
+                    </span>
+                    <span className="text-[11px] text-fg-dim font-mono ml-3">
+                      {t._count.signals} signals · {t._count.scoreSnapshots} scores
+                    </span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-fg-dim group-hover:text-accent transition-colors" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-fg-dim text-sm font-mono">
+              No topics yet. Enter an idea above to start validating.
+            </p>
+          )}
         </div>
       </main>
 

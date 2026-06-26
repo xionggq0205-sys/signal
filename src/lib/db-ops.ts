@@ -8,6 +8,15 @@ import type { RawSignal, ClassifiedSignal, DemandScore, GoNoGoDecision } from ".
 
 // ─── Topics ─────────────────────────────────────────────────
 
+export async function listTopics() {
+  return prisma.topic.findMany({
+    orderBy: { createdAt: "desc" },
+    include: {
+      _count: { select: { signals: true, scoreSnapshots: true } },
+    },
+  });
+}
+
 export async function createTopic(userId: string, title: string, description: string, keywords: string[]) {
   return prisma.topic.create({
     data: {
