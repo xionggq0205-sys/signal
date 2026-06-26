@@ -30,15 +30,16 @@ echo ""
 # ─── 1. System Check ────────────────────────────────────────
 log "Checking system..."
 
-[ "$(id -u)" = "0" ] || err "Must run as root (use sudo)"
+# Check sudo access
+sudo -n true 2>/dev/null || err "Need sudo access (run: sudo -v first)"
 
 # ─── 2. Install Dependencies ─────────────────────────────────
 log "Installing dependencies..."
 
 # Node.js via nodesource
 if ! command -v node &>/dev/null; then
-  curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
-  apt-get install -y nodejs
+  curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | sudo -E bash -
+  sudo apt-get install -y nodejs
   log "Node.js $(node -v) installed"
 else
   log "Node.js $(node -v) already installed"
@@ -46,17 +47,17 @@ fi
 
 # Git
 if ! command -v git &>/dev/null; then
-  apt-get install -y git
+  sudo apt-get install -y git
 fi
 
 # SQLite
 if ! dpkg -l | grep -q sqlite3; then
-  apt-get install -y sqlite3
+  sudo apt-get install -y sqlite3
 fi
 
 # PM2 (process manager)
 if ! command -v pm2 &>/dev/null; then
-  npm install -g pm2
+  sudo npm install -g pm2
   log "PM2 installed"
 else
   log "PM2 $(pm2 -v) already installed"
@@ -64,7 +65,7 @@ fi
 
 # Nginx (reverse proxy)
 if ! command -v nginx &>/dev/null; then
-  apt-get install -y nginx
+  sudo apt-get install -y nginx
   log "Nginx installed"
 else
   log "Nginx $(nginx -v 2>&1 | head -1) already installed"
@@ -113,14 +114,14 @@ pm2 delete "$PROJECT" 2>/dev/null || true
 
 pm2 start npm --name "$PROJECT" -- start -- -p 3100
 pm2 save
-pm2 startup systemd -u root --hp /root
+sudo env PATH=$PATH pm2 startup systemd -u ubuntu --hp /home/ubuntu
 
 log "PM2: $PROJECT started on :3100"
 
 # ─── 7. Nginx Reverse Proxy ──────────────────────────────
 log "Configuring Nginx..."
 
-cat > /etc/nginx/sites-available/$PROJECT <<'NGINX'
+cat | sudo tee /etc/nginx/sites-available/$PROJECT <<'NGINX'
 server {
     listen 80;
     server_name _;
@@ -140,11 +141,11 @@ server {
 NGINX
 
 # Enable site
-ln -sf /etc/nginx/sites-available/$PROJECT /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
+sudo ln -sf /etc/nginx/sites-available/$PROJECT /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
 
 # Test & reload
-nginx -t && systemctl reload nginx
+sudo nginx -t && sudo systemctl reload nginx
 log "Nginx configured: :80 → :3100"
 
 # ─── 8. Cron (scheduled scanning) ────────────────────────
