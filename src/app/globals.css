@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-bg text-fg antialiased;
+    font-family: "Geist", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+  }
+}
+
+/* Score gauge animation */
+@keyframes gauge-fill {
+  from {
+    stroke-dashoffset: 283;
+  }
+  to {
+    stroke-dashoffset: var(--gauge-offset);
+  }
+}
+
+.gauge-ring {
+  animation: gauge-fill 1.5s ease-out forwards;
+}
+
+/* Glow effects */
+.glow-accent {
+  box-shadow: 0 0 40px rgba(94, 106, 210, 0.15), 0 0 80px rgba(94, 106, 210, 0.05);
+}
+
+.glow-accent-sm {
+  box-shadow: 0 0 20px rgba(94, 106, 210, 0.12);
+}
+
+/* Signal card hover */
+.signal-card {
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.signal-card:hover {
+  border-color: #334155;
+  background-color: #1e293b;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}

@@ -1,0 +1,95 @@
+// Prisma schema for Signal — Market Validation Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./signal.db"
+}
+
+// ─── User & Topic ───────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  topics Topic[]
+}
+
+model Topic {
+  id          String   @id @default(cuid())
+  userId      String
+  title        String   // e.g. "epub to pdf converter"
+  description String?   // user's original input
+  status      String   @default("active") // active | archived
+  keywords    String   // JSON array of expanded keywords (from 扩词 engine)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user          User             @relation(fields: [userId], references: [id])
+  signals       Signal[]
+  scoreSnapshots ScoreSnapshot[]
+  alerts        Alert[]
+}
+
+// ─── Signal (5 sources) ─────────────────────────────────────
+
+model Signal {
+  id          String   @id @default(cuid())
+  topicId     String
+  source      String   // reddit | hackernews | producthunt | googletrends | fiverr | upwork | gumroad
+  type        String   // pain_point | feature_request | complaint | comparison | payment_signal | question
+  title       String
+  content     String
+  url         String?
+  permalink   String?  // permanent link to source
+  author      String?
+  engagement  Int      @default(0) // upvotes / likes / replies
+  intensity   Float    @default(0) // LLM-scored emotional intensity (0-1)
+  specificity Float    @default(0) // LLM-scored description specificity (0-1)
+  wtpSignal   Float    @default(0) // willingness-to-pay signal strength (0-1)
+  extractedAt DateTime
+  createdAt   DateTime @default(now())
+
+  topic Topic @relation(fields: [topicId], references: [id])
+}
+
+// ─── Score Snapshots ────────────────────────────────────────
+
+model ScoreSnapshot {
+  id              String   @id @default(cuid())
+  topicId         String
+  compositeScore  Float    // 0-100
+  frequencyScore  Float    // 0-25
+  intensityScore  Float    // 0-30
+  specificityScore Float   // 0-20
+  monetizabilityScore Float // 0-25
+  totalSignals    Int
+  activeSignals   Int      // signals from last 30 days
+  growthRate      Float    // MoM growth in signal count
+  goDecision      String?  // go | no_go | uncertain
+  goReasons       String?  // JSON array of satisfied GO conditions
+  noGoReasons     String?  // JSON array of triggered NO-GO conditions
+  snappedAt       DateTime
+  createdAt       DateTime @default(now())
+
+  topic Topic @relation(fields: [topicId], references: [id])
+}
+
+// ─── Alerts ─────────────────────────────────────────────────
+
+model Alert {
+  id        String   @id @default(cuid())
+  topicId   String
+  type      String   // score_spike | high_intensity_signal | weekly_digest
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  topic Topic @relation(fields: [topicId], references: [id])
+}
