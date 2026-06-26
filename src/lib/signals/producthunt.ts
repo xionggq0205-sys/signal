@@ -22,6 +22,8 @@ export async function searchProductHunt(
     const res = await fetch(url);
 
     if (!res.ok) {
+      // PH v1 API is deprecated, silently skip
+      if (res.status === 403) return [];
       console.warn(`[ProductHunt] HTTP ${res.status} for keyword: ${keyword}`);
       return [];
     }

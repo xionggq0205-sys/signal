@@ -29,6 +29,9 @@ export async function searchFiverr(
     });
 
     if (!res.ok) {
+      // 403 = Cloudflare block on cloud servers, 410 = endpoint removed
+      // Silently skip these — they won't work without headless browser (P2)
+      if (res.status === 403 || res.status === 410) return [];
       console.warn(`[Fiverr] HTTP ${res.status} for "${keyword}"`);
       return [];
     }
@@ -142,6 +145,8 @@ export async function searchUpwork(
     });
 
     if (!res.ok) {
+      // 410 = Upwork RSS endpoint removed, silently skip
+      if (res.status === 410) return [];
       console.warn(`[Upwork] HTTP ${res.status} for "${keyword}"`);
       return [];
     }
@@ -197,6 +202,8 @@ export async function searchGumroad(
     });
 
     if (!res.ok) {
+      // 404 = Gumroad search endpoint not accessible, silently skip
+      if (res.status === 404) return [];
       console.warn(`[Gumroad] HTTP ${res.status}`);
       return [];
     }

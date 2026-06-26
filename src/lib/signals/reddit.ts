@@ -32,15 +32,25 @@ export async function searchReddit(
 
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "Signal-MarketValidator/0.1" },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; SignalBot/0.1)",
+        "Accept": "application/json",
+      },
     });
 
     if (!res.ok) {
+      if (res.status === 403) return []; // silently skip, IP blocked on cloud servers
       console.warn(`[Reddit] HTTP ${res.status} for keyword: ${keyword}`);
       return [];
     }
 
-    const json = await res.json();
+    // Validate it's actually JSON before parsing — Reddit returns HTML when rate-limited
+    const text = await res.text();
+    if (!text.trim().startsWith("{") && !text.trim().startsWith("[")) {
+      return []; // HTML response = rate limited, silently skip
+    }
+
+    const json = JSON.parse(text);
     const children: RedditChild[] = json?.data?.children ?? [];
 
     return children.map((c) => ({

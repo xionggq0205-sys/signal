@@ -30,10 +30,8 @@ export async function scheduledScan(): Promise<PipelineResult[]> {
   for (const topic of activeTopics) {
     try {
       console.log(`[Scheduler] Scanning topic: ${topic.id} (${topic.title})`);
-      const result = await runPipeline(
-        topic.id,
-        topic.description || topic.title
-      );
+      // Use title for search — shorter keywords yield more signals than long descriptions
+      const result = await runPipeline(topic.id, topic.title);
       results.push(result);
       console.log(
         `[Scheduler] Topic ${topic.id}: score ${result.score.composite}, decision ${result.decision.decision}`
